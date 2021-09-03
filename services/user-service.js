@@ -62,20 +62,20 @@ class UserService {
 
 
    async login(email, password) {
-      const candidate = await userModel.findOne({
+      const user = await userModel.findOne({
          email
       })
 
-      if (!candidate) {
+      if (!user) {
          throw ApiError.BadRequest('User with this email is undefined')
       }
 
-      const isPassEquals = await bcrypt.compare(password, candidate.password)
+      const isPassEquals = await bcrypt.compare(password, user.password)
       if (!isPassEquals) {
          throw ApiError.BadRequest('Password in incorect')
       }
 
-      const userDto = new UserDto(candidate)
+      const userDto = new UserDto(user)
       const token = tokenService.generateToken({
          ...userDto
       })
@@ -99,27 +99,22 @@ class UserService {
 
    async refresh(refreshToken) {
       if (!refreshToken) {
-         throw ApiError.UnautharizedError('Not')
+         throw ApiError.UnauthorizedError();
       }
-
-      const userData = tokenService.validateRefreshToken(refreshToken)
-      const tokenFromDB = await tokenService.findToken(refreshToken)
-
-      if (!userData || !tokenFromDB) {
-         throw ApiError.UnautharizedError()
+      const userData = tokenService.validateRefreshToken(refreshToken);
+      const tokenFromDb = await tokenService.findToken(refreshToken);
+      if (!userData || !tokenFromDb) {
+         throw ApiError.UnauthorizedError();
       }
-
-      const user = UserModel.findById(userData.id)
-
-      const userDto = new UserDto(user)
-      const token = tokenService.generateToken({
+      const user = await UserModel.findById(userData.id);
+      const userDto = new UserDto(user);
+      const tokens = tokenService.generateToken({
          ...userDto
-      })
+      });
 
-      await tokenService.saveToken(userDto.id, token.refreshToken)
-
+      await tokenService.saveToken(userDto.id, tokens.refreshToken);
       return {
-         ...token,
+         ...tokens,
          user: userDto
       }
    }
